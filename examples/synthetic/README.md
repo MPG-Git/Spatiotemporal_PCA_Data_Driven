@@ -5,6 +5,10 @@ extract it to a writable folder, and follow the setup below. These changes are
 on the review branch; downloading the older default branch may omit them.
 The input files and reference outputs are already included; generation is optional.
 
+This repository is private. The GitHub ZIP link requires sign-in and repository
+access; otherwise, obtain the ZIP from the repository owner. The extracted demo
+does not need GitHub credentials to run.
+
 ## Run and inspect
 
 This is a MATLAB/EEGLAB workflow. Install EEGLAB and MATLAB Statistics and
