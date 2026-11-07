@@ -1,0 +1,13 @@
+Metric,Value,AbsTolerance
+pca_PROMAX_TF01.mat:TemporalFactors,2,0
+pca_PROMAX_TF01.mat:SpatialFactors,1,0
+pca_PROMAX_TF01.mat:ReconstructionError,1.27745488912989e-16,1e-10
+pca_PROMAX_TF02.mat:TemporalFactors,2,0
+pca_PROMAX_TF02.mat:SpatialFactors,1,0
+pca_PROMAX_TF02.mat:ReconstructionError,1.27745488912989e-16,1e-10
+pca_VARIMAX_TF01.mat:TemporalFactors,2,0
+pca_VARIMAX_TF01.mat:SpatialFactors,1,0
+pca_VARIMAX_TF01.mat:ReconstructionError,1.35805104609466e-16,1e-10
+pca_VARIMAX_TF02.mat:TemporalFactors,2,0
+pca_VARIMAX_TF02.mat:SpatialFactors,1,0
+pca_VARIMAX_TF02.mat:ReconstructionError,1.35805104609466e-16,1e-10

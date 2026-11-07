@@ -18,7 +18,8 @@ function run_spatiotemporal_pca_wrapper(folder1, folder2, outputDir, ...
 %   events         - cell array of event codes (default: {'S  6','S  7'})
 %   epochWindow    - [min max] epoch window in seconds (default: [-0.2 0.7])
 %   BaselineCorrect- [min max] baseline correction window in ms (default: [-200 0])
-%   erpWindow      - [min max] ERP component search window in ms (default: [300 500])
+%   erpWindow      - [min max] highlighted ERP window in ms (default: [300 500]);
+%                    displayed peaks are selected over the full waveform
 %   nPermPA        - number of permutations for parallel analysis (default: 500)
 %
 % Requirements:

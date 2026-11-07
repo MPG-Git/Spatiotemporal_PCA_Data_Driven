@@ -1,0 +1,3 @@
+Temporal factors chosen = 2
+Spatial factors chosen  = 1
+(Criteria: real eigenvalue > mean random eigenvalue, 10 permutations)

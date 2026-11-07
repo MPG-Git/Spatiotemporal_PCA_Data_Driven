@@ -65,3 +65,10 @@ The readiness audit processed eight synthetic EEG datasets, rejected a
 channel-order mismatch, exercised one- and two-factor solutions with Varimax
 and Promax, checked reconstruction and path restoration, and saved results.
 See `tests/smoke_spatiotemporal_pca.m` for a reproducible synthetic test.
+
+## Downloadable synthetic example
+
+[Run the bundled synthetic example](examples/synthetic/README.md) to check your setup against
+included reference outputs. It contains actual input files, a one-command runner,
+expected tables/plots, and numerical comparisons that report PASS or a mismatch.
+The example guide links to the ZIP of this review branch, including the readiness fixes.
