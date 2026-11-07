@@ -1,8 +1,8 @@
 # Synthetic example: Pooled ERP PCA with known synthetic sources
 
-Download the [repository ZIP with the example and readiness fixes](https://github.com/MPG-Git/Spatiotemporal_PCA_Data_Driven/archive/refs/heads/codex/readiness-20261107.zip),
-extract it to a writable folder, and follow the setup below. These changes are
-on the review branch; downloading the older default branch may omit them.
+Download the [repository ZIP with the example and readiness fixes](https://github.com/MPG-Git/Spatiotemporal_PCA_Data_Driven/archive/refs/heads/main.zip),
+extract it to a writable folder, and follow the setup below. The ZIP comes from
+main and includes the readiness fixes and example files.
 The input files and reference outputs are already included; generation is optional.
 
 This repository is private. The GitHub ZIP link requires sign-in and repository
