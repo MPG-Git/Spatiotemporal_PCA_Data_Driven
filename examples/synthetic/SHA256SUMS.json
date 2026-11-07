@@ -1,0 +1,18 @@
+{
+  "data/group_one/s01.set": "9d2c662b6b8b56cc78fa9c27a7cbc676fa89b1b9d8906b19635e074e3ea92a77",
+  "data/group_one/s02.set": "d012ff21eeff4dff4f0019f2e1ae773b30e00d12eb41d5d6a45e39d9e9eae0e3",
+  "data/group_one/s03.set": "2b9c0d09c8337574b2930d329dffd2eac38328bdb7c3a8b1d39290a64eba8879",
+  "data/group_one/s04.set": "18b154c2e50eafebac44d9843fc711e06e33f5a1160ad7e8c516ffa946df20b6",
+  "data/group_two/s05.set": "4da090cd95e9e6e972170bd3b79ececff7bbbf4afe224eff1df5632f26292e84",
+  "data/group_two/s06.set": "1852c4986141a604fb4beccb121eaf62e8402dc0dd238c7eda8b001e1911b7eb",
+  "data/group_two/s07.set": "0b0608eeef8cde463b0bc1351df01f6ccb32eb50b6b29af8d6ebe666066d0bc8",
+  "data/group_two/s08.set": "ce53a38834db806f4cc2a9e0d65580bb2dcaa9356a1d36b200bf214e094c0734",
+  "expected/figure_01.png": "1ac9e8f534ab2e06df285319d05632fe139c7b8429753fc949feff61a32bb879",
+  "expected/figure_02.png": "6767387b8f4ebbe4daad5d605bc253cc8acda7d3d8c6218e0257d60cccbd10f3",
+  "expected/metrics.csv": "09783633076766a66e05b6c8642aa76bab4ff46378ecd7b74848e7b57476788f",
+  "expected/parallel_analysis_report.txt": "431895e9a978505c126e6197980f668a4d9a721222f1695dd84466475c865ca6",
+  "expected/pca_PROMAX_TF01.mat_temporal_gram.csv": "309ab6b63ed06cf670e87ca14e2dc718b75c7f573fd5e76dfc20165ee7947237",
+  "expected/pca_PROMAX_TF02.mat_temporal_gram.csv": "309ab6b63ed06cf670e87ca14e2dc718b75c7f573fd5e76dfc20165ee7947237",
+  "expected/pca_VARIMAX_TF01.mat_temporal_gram.csv": "f74fbd989134ebd6f1d406534e23c55d4f11d7328b13d8ba728fb8ed2d402474",
+  "expected/pca_VARIMAX_TF02.mat_temporal_gram.csv": "f74fbd989134ebd6f1d406534e23c55d4f11d7328b13d8ba728fb8ed2d402474"
+}

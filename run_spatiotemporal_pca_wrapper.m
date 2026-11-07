@@ -1,23 +1,25 @@
 function run_spatiotemporal_pca_wrapper(folder1, folder2, outputDir, ...
     events, epochWindow, BaselineCorrect, erpWindow, nPermPA, rotationMethods)
-% RUN_SPATIOTEMPORAL_PCA_DEMO
+% RUN_SPATIOTEMPORAL_PCA_WRAPPER
 %   Wrapper for pooled spatiotemporal PCA analysis on EEG .set data.
 %
 % Usage:
-%   run_spatiotemporal_pca_demo(folder1, folder2, outputDir, ...
+%   run_spatiotemporal_pca_wrapper(folder1, folder2, outputDir, ...
 %       events, epochWindow, BaselineCorrect, erpWindow, nPermPA)
 %
 % Example:
-%   run_spatiotemporal_pca_demo('example_data/PBO','example_data/THC','results', ...
+%   run_spatiotemporal_pca_wrapper('example_data/PBO','example_data/THC','results', ...
 %       {'S  6','S  7'}, [-0.2 0.7], [-200 0], [300 500], 500);
 %
 % Inputs:
-%   folder1        - path to .SET Files
+%   folder1        - path to .SET files for the first group
+%   folder2        - path to the second group; '' for a single group
 %   outputDir      - directory to save reports/outputs
 %   events         - cell array of event codes (default: {'S  6','S  7'})
 %   epochWindow    - [min max] epoch window in seconds (default: [-0.2 0.7])
 %   BaselineCorrect- [min max] baseline correction window in ms (default: [-200 0])
-%   erpWindow      - [min max] ERP component search window in ms (default: [300 500])
+%   erpWindow      - [min max] highlighted ERP window in ms (default: [300 500]);
+%                    displayed peaks are selected over the full waveform
 %   nPermPA        - number of permutations for parallel analysis (default: 500)
 %
 % Requirements:
@@ -40,22 +42,37 @@ if ~exist(outputDir, 'dir')
     mkdir(outputDir);
 end
 
-%% Save reports
-save_list(fullfile(outputDir,'missing_epochs_all.txt'), missing_all);
-save_list(fullfile(outputDir,'mismatch_length_all.txt'), mismatch_all);
-
-eeglab; close;
+validateattributes(nPermPA,{'numeric'},{'scalar','integer','positive'});
+folders={folder1}; groupNames={'Group1'};
+if ~isempty(folder2), folders{2}=folder2; groupNames{2}='Group2'; end
+for k=1:numel(folders)
+    if ~isfolder(folders{k}), error('PCA:InputFolder','Input folder does not exist: %s',folders{k}); end
+end
+if isempty(which('pop_loadset')), error('PCA:EEGLAB','Initialize EEGLAB before running this workflow.'); end
+% Use MATLAB Statistics PCA even if an EEGLAB plugin shadows it, and restore
+% the caller's path after the analysis.
+oldPath=path; pathCleanup=onCleanup(@() path(oldPath)); %#ok<NASGU>
+statsPath=fullfile(matlabroot,'toolbox','stats','stats');
+if ~isfile(fullfile(statsPath,'pca.m')), error('PCA:Toolbox','Statistics and Machine Learning Toolbox is required.'); end
+addpath(statsPath,'-begin');
+initialFigures=findall(groot,'Type','figure');
 
 %% =============================
 % Run pooled analysis (all conditions together)
 % =============================
 [missing_files, mismatch_files, labels] = run_spatiotemporal_pca_core( ...
-    folders, groupNames, events, epochWindow, BaselineCorrect, erpWindow, nPermPA, rotationMethods)
+    folders, groupNames, events, epochWindow, BaselineCorrect, erpWindow, nPermPA, rotationMethods, outputDir);
 
 
 
-save_list('missing_epochs_all.txt', missing_all);
-save_list('mismatch_length_all.txt', mismatch_all);
+save_list(fullfile(outputDir,'missing_epochs_all.txt'), missing_files);
+save_list(fullfile(outputDir,'mismatch_length_all.txt'), mismatch_files);
+save(fullfile(outputDir,'analysis_metadata.mat'),'folders','labels','events','epochWindow','BaselineCorrect','erpWindow','nPermPA','rotationMethods');
+newFigures=setdiff(findall(groot,'Type','figure'),initialFigures);
+for k=1:numel(newFigures)
+    savefig(newFigures(k),fullfile(outputDir,sprintf('figure_%02d.fig',k)));
+    exportgraphics(newFigures(k),fullfile(outputDir,sprintf('figure_%02d.png',k)));
+end
 
 end
 % =============================
@@ -82,7 +99,7 @@ end
 % Main PCA function (pooled)
 % =============================
     function [missing_files, mismatch_files, labels] = run_spatiotemporal_pca_core( ...
-            folders, groupNames, events, epochWindow, BaselineCorrect, erpWindow)
+            folders, groupNames, events, epochWindow, BaselineCorrect, erpWindow, nPermPA, rotationMethods, outputDir)
 
 
         all_data = [];
@@ -117,7 +134,7 @@ end
                 EEG = pop_rmbase(EEG, BaselineCorrect);
 
                 % Save time reference
-                times_ref = EEG.times;
+                if isempty(times_ref), times_ref = EEG.times; chanlocs_ref = EEG.chanlocs; end
 
                 % ERP for subject
                 erp = mean(EEG.data, 3); % channels × timepoints
@@ -126,7 +143,9 @@ end
                 if isempty(all_data)
                     all_data(:,:,1) = erp;
                 else
-                    if size(erp,2) == size(all_data,2)
+                    if isequal(size(erp),size(all_data(:,:,1))) && ...
+                            isequal(EEG.times,times_ref) && ...
+                            isequal({EEG.chanlocs.labels},{chanlocs_ref.labels})
                         all_data(:,:,end+1) = erp;
                     else
                         warning('Skipping %s (time mismatch)', flist(i).name);
@@ -141,16 +160,10 @@ end
         end
 
         if isempty(all_data)
-            warning('No usable data for pooled PCA');
-            return;
+            error('PCA:NoData','No usable datasets for pooled PCA; check files and event codes.');
         end
-        % Please KEEP this section it helps alot - START
-        pluginPCAPath = 'C:\eeglab2024\plugins\AAR131130';
-        if exist(pluginPCAPath, 'dir')
-            rmpath(pluginPCAPath);
-            fprintf('Removed EEGLAB plugin PCA from path: %s\n', pluginPCAPath);
-        end
-        % Please KEEP this section it helps alot - END
+        % PCA path conflicts are handled by the wrapper using matlabroot;
+        % its cleanup restores the caller's path even after errors.
 
         % =============================
         % Step 1: Temporal PCA Setup
@@ -167,6 +180,7 @@ end
         end
 
         [nChan, nTime, nSubj] = size(all_data);
+        if nSubj<3, error('PCA:Subjects','At least three usable datasets are required.'); end
         reshaped_data = reshape(permute(all_data, [3,1,2]), nSubj*nChan, nTime);
 
 
@@ -191,6 +205,10 @@ end
         fprintf('Running Parallel Analysis for Spatial PCA...\n');
         erpMatrix = reshape(all_data, nChan, nTime * nSubj)';  % subjects*trials × channels
         nSpatialFactors = parallel_analysis(erpMatrix, nPermPA);
+        nSpatialFactors=min([nSpatialFactors,nSubj-1,nChan]);
+        if nTemporalFactors<1 || nSpatialFactors<1
+            error('PCA:NoFactors','Parallel analysis retained no factors. No decomposition was forced.');
+        end
 
         fprintf('Suggested number of Spatial Factors = %d\n', nSpatialFactors);
         % === Reporting block ===
@@ -201,7 +219,7 @@ end
         fprintf('--------------------------------\n\n');
 
         % Save decision for reproducibility
-        fid = fopen('parallel_analysis_report.txt','w');
+        fid = fopen(fullfile(outputDir,'parallel_analysis_report.txt'),'w');
         fprintf(fid,'Temporal factors chosen = %d\n', nTemporalFactors);
         fprintf(fid,'Spatial factors chosen  = %d\n', nSpatialFactors);
         fprintf(fid,'(Criteria: real eigenvalue > mean random eigenvalue, %d permutations)\n', nPermPA);
@@ -237,20 +255,24 @@ end
             screeSpatial.RotationNames{r} = rotName;
 
             % Apply rotation
-            coeff_time_rot = rotatefactors(coeff_time_unrot, 'Method', rotArgs{:});
-            coeff_time_rot_scaled = coeff_time_rot .* sqrt(latent_time(1:size(coeff_time_rot,2)))';
+            if size(coeff_time_unrot,2)==1
+                coeff_time_rot=coeff_time_unrot; rotation=1;
+            else
+                [coeff_time_rot,rotation] = rotatefactors(coeff_time_unrot, 'Method', rotArgs{:});
+            end
+            coeff_time_rot_scaled = (coeff_time_unrot .* sqrt(latent_time(1:size(coeff_time_rot,2)))') * rotation;
 
             % Rotated scores & variance explained
-            rotated_scores = reshaped_data * coeff_time_rot;
+            rotated_scores = score_time_unrot / rotation';
             var_explained_rot = 100 * var(rotated_scores) / sum(var(rotated_scores));
             scree.VarExplained(r,:) = var_explained_rot(1:nTemporalFactors);
             scree.VarCumulative(r,:) = cumsum(var_explained_rot(1:nTemporalFactors));
 
 
             % -----------------------------------------
-            % Temporal PCA plot: Raw (top) vs SPSS-scaled (bottom)
+            % Temporal PCA plot: Raw (top) vs covariance-scaled (bottom)
             % -----------------------------------------
-            figure('Name', sprintf('%s - Temporal PCA (%s) Raw (top) vs SPSS-scaled (bottom)', ...
+            figure('Name', sprintf('Temporal PCA (%s) Raw (top) vs covariance-scaled (bottom)', ...
                 rotName));
             colors = lines(size(coeff_time_rot,2));
 
@@ -270,14 +292,14 @@ end
                 'Location', 'best');
             grid on; hold off;
 
-            % SPSS-scaled loadings
+            % covariance-scaled loadings
             subplot(2,1,2);
             hold on;
             for f = 1:size(coeff_time_rot_scaled,2)
                 plot(times_ref, coeff_time_rot_scaled(:,f), '-', 'Color', colors(f,:), 'LineWidth', 1.5);
             end
             xlabel('Time (ms)'); ylabel('Scaled Loading');
-            title(sprintf('%s Temporal PCA (%s) - SPSS-scaled\nnTemporalFactors = %d (Parallel Analysis)', ...
+            title(sprintf('%s Temporal PCA (%s) - covariance-scaled\nnTemporalFactors = %d (Parallel Analysis)', ...
                 condition_label, rotName, nTemporalFactors));
             legend(arrayfun(@(x) sprintf('F%d',x), 1:size(coeff_time_rot_scaled,2), 'UniformOutput', false), ...
                 'Location', 'best');
@@ -301,8 +323,16 @@ end
                 [coeff_space, score_space, latent_space] = pca(subj_factor_scores, ...
                     'Centered', true, 'NumComponents', nSpatialFactors);
 
-                coeff_space_rot = rotatefactors(coeff_space, 'Method', rotArgs{:});
-                coeff_space_rot_scaled = coeff_space_rot .* sqrt(latent_space(1:size(coeff_space_rot,2)))';
+                if size(coeff_space,2)==1
+                    coeff_space_rot=coeff_space; spatialRotation=1;
+                else
+                    [coeff_space_rot,spatialRotation] = rotatefactors(coeff_space, 'Method', rotArgs{:});
+                end
+                coeff_space_rot_scaled = (coeff_space .* sqrt(latent_space(1:size(coeff_space_rot,2)))') * spatialRotation;
+                save(fullfile(outputDir,sprintf('pca_%s_TF%02d.mat',rotName,f)), ...
+                    'coeff_time_unrot','score_time_unrot','coeff_time_rot','coeff_time_rot_scaled', ...
+                    'rotated_scores','rotation','coeff_space_rot','coeff_space_rot_scaled', ...
+                    'latent_time','latent_space','times_ref','chanlocs_ref','labels');
 
                 variance_explained_space = 100 * latent_space / sum(latent_space);
                 cumulative_variance_space = cumsum(variance_explained_space);
@@ -361,7 +391,7 @@ end
                 nCompsToPlot = size(coeff_space_rot,2);
                 for sf = 1:nCompsToPlot
                     subplot(3, nCompsToPlot, nCompsToPlot + sf);
-                    topoplot(coeff_space_rot(:,sf), EEG.chanlocs, ...
+                    topoplot(coeff_space_rot(:,sf), chanlocs_ref, ...
                         'maplimits', [raw_min raw_max], 'electrodes', elecOpt, ...
                         'style', 'both', 'numcontour', 6);
                     title(sprintf('Raw C%d (%s)\n%.1f%%', ...
@@ -371,7 +401,7 @@ end
                 % Spatial Topoplots (Scaled)
                 for sf = 1:nCompsToPlot
                     subplot(3, nCompsToPlot, 2*nCompsToPlot + sf);
-                    topoplot(coeff_space_rot_scaled(:,sf), EEG.chanlocs, ...
+                    topoplot(coeff_space_rot_scaled(:,sf), chanlocs_ref, ...
                         'maplimits', [scaled_min scaled_max], 'electrodes', elecOpt, ...
                         'style', 'both', 'numcontour', 6);
                     title(sprintf('Scaled C%d (%s)\n%.1f%%', ...
@@ -417,6 +447,7 @@ end
         grid on;
 
         % Spatial variance averaged across TFs
+        maxCompsToShow=min([maxCompsToShow,nChan,nSubj-1]);
         subplot(2,1,2);
         hold on;
         for r = 1:length(rotationMethods)
@@ -452,7 +483,10 @@ end
         % --- Step 2. Random eigenvalues ---
         randEigMat = zeros(nPerm, length(realEig));
         for i = 1:nPerm
-            randData = randn(size(dataMatrix));
+            randData = zeros(size(dataMatrix));
+            for col=1:size(dataMatrix,2)
+                randData(:,col)=dataMatrix(randperm(size(dataMatrix,1)),col);
+            end
             [~,~,latent_rand] = pca(randData,'Centered',true);
             randEigMat(i,:) = latent_rand(:);
         end
